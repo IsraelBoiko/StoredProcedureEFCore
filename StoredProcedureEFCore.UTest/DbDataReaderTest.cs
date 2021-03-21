@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Threading.Tasks;
 using Moq;
 using Moq.DataReader;
 using NUnit.Framework;
@@ -27,10 +28,30 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestToListAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            List<TestModel> resultSet = await mock.ToListAsync<TestModel>();
+            Assert.AreEqual(2, resultSet.Count);
+            TestModelEqual(resultSet[0], 0);
+            TestModelEqual(resultSet[1], 1);
+        }
+
+        [Test]
         public void TestToDictionary()
         {
             DbDataReader mock = CreateDataReaderMock(0, 1).Object;
             Dictionary<sbyte, TestModel> resultSet = mock.ToDictionary<sbyte, TestModel>(m => m.Sb);
+            Assert.AreEqual(2, resultSet.Count);
+            TestModelEqual(resultSet[_testModelsCollection[0].Sb], 0);
+            TestModelEqual(resultSet[_testModelsCollection[1].Sb], 1);
+        }
+
+        [Test]
+        public async Task TestToDictionaryAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            Dictionary<sbyte, TestModel> resultSet = await mock.ToDictionaryAsync<sbyte, TestModel>(m => m.Sb);
             Assert.AreEqual(2, resultSet.Count);
             TestModelEqual(resultSet[_testModelsCollection[0].Sb], 0);
             TestModelEqual(resultSet[_testModelsCollection[1].Sb], 1);
@@ -47,6 +68,16 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestToLookupAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            Dictionary<sbyte, List<TestModel>> resultSet = await mock.ToLookupAsync<sbyte, TestModel>(m => m.Sb);
+            Assert.AreEqual(2, resultSet.Count);
+            TestModelEqual(resultSet[_testModelsCollection[0].Sb][0], 0);
+            TestModelEqual(resultSet[_testModelsCollection[1].Sb][0], 1);
+        }
+
+        [Test]
         public void TestToSet()
         {
             DbDataReader mock = CreateDataReaderMock(0, 1).Object;
@@ -57,10 +88,28 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestToSetAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            HashSet<sbyte> resultSet = await mock.ToSetAsync<sbyte>();
+            Assert.AreEqual(2, resultSet.Count);
+            resultSet.Contains(_testModelsCollection[0].Sb);
+            resultSet.Contains(_testModelsCollection[1].Sb);
+        }
+
+        [Test]
         public void TestFirst()
         {
             DbDataReader mock = CreateDataReaderMock(0).Object;
             TestModel tm = mock.First<TestModel>();
+            TestModelEqual(tm, 0);
+        }
+
+        [Test]
+        public async Task TestFirstAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0).Object;
+            TestModel tm = await mock.FirstAsync<TestModel>();
             TestModelEqual(tm, 0);
         }
 
@@ -80,10 +129,25 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestFirstOrDefaultAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0).Object;
+            TestModel tm = await mock.FirstOrDefaultAsync<TestModel>();
+            TestModelEqual(tm, 0);
+        }
+
+        [Test]
         public void TestFirstOrDefaultOnEmpty()
         {
             DbDataReader mock = CreateDataReaderMock().Object;
             Assert.Null(mock.FirstOrDefault<TestModel>());
+        }
+
+        [Test]
+        public async Task TestFirstOrDefaultOnEmptyAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock().Object;
+            Assert.Null(await mock.FirstOrDefaultAsync<TestModel>());
         }
 
         [Test]
@@ -95,6 +159,14 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestSingleAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0).Object;
+            TestModel tm = await mock.SingleAsync<TestModel>();
+            TestModelEqual(tm, 0);
+        }
+
+        [Test]
         public void TestSingleOnEmpty()
         {
             DbDataReader mock = CreateDataReaderMock().Object;
@@ -102,10 +174,24 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public void TestSingleOnEmptyAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock().Object;
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await mock.SingleAsync<TestModel>());
+        }
+
+        [Test]
         public void TestSingleOnNotSingle()
         {
             DbDataReader mock = CreateDataReaderMock(0, 1).Object;
             Assert.Throws<InvalidOperationException>(() => mock.Single<TestModel>());
+        }
+
+        [Test]
+        public void TestSingleOnNotSingleAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await mock.SingleAsync<TestModel>());
         }
 
         [Test]
@@ -117,10 +203,25 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestSingleOrDefaultAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0).Object;
+            TestModel tm = await mock.SingleOrDefaultAsync<TestModel>();
+            TestModelEqual(tm, 0);
+        }
+
+        [Test]
         public void TestSingleOrDefaultOnEmpty()
         {
             DbDataReader mock = CreateDataReaderMock().Object;
             Assert.Null(mock.SingleOrDefault<TestModel>());
+        }
+
+        [Test]
+        public async Task TestSingleOrDefaultOnEmptyAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock().Object;
+            Assert.Null(await mock.SingleOrDefaultAsync<TestModel>());
         }
 
         [Test]
@@ -131,10 +232,27 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public void TestSingleOrDefaultOnNotSingleAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await mock.SingleOrDefaultAsync<TestModel>());
+        }
+
+        [Test]
         public void TestColumn()
         {
             DbDataReader mock = CreateDataReaderMock(0, 1).Object;
             List<sbyte> col = mock.Column<sbyte>();
+            Assert.AreEqual(2, col.Count);
+            Assert.AreEqual(col[0], _testModelsCollection[0].Sb);
+            Assert.AreEqual(col[1], _testModelsCollection[1].Sb);
+        }
+
+        [Test]
+        public async Task TestColumnAsync()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            List<sbyte> col = await mock.ColumnAsync<sbyte>();
             Assert.AreEqual(2, col.Count);
             Assert.AreEqual(col[0], _testModelsCollection[0].Sb);
             Assert.AreEqual(col[1], _testModelsCollection[1].Sb);
@@ -151,10 +269,30 @@ namespace StoredProcedureEFCore.UTest
         }
 
         [Test]
+        public async Task TestColumn2Async()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            List<ulong> col = await mock.ColumnAsync<ulong>(nameof(TestModel.Ul));
+            Assert.AreEqual(2, col.Count);
+            Assert.AreEqual(col[0], _testModelsCollection[0].Ul);
+            Assert.AreEqual(col[1], _testModelsCollection[1].Ul);
+        }
+
+        [Test]
         public void TestColumn3()
         {
             DbDataReader mock = CreateDataReaderMock(0, 1).Object;
             List<int> col = mock.Column<int>(3);
+            Assert.AreEqual(2, col.Count);
+            Assert.AreEqual(col[0], _testModelsCollection[0].I);
+            Assert.AreEqual(col[1], _testModelsCollection[1].I);
+        }
+
+        [Test]
+        public async Task TestColumn3Async()
+        {
+            DbDataReader mock = CreateDataReaderMock(0, 1).Object;
+            List<int> col = await mock.ColumnAsync<int>(3);
             Assert.AreEqual(2, col.Count);
             Assert.AreEqual(col[0], _testModelsCollection[0].I);
             Assert.AreEqual(col[1], _testModelsCollection[1].I);
@@ -184,7 +322,7 @@ namespace StoredProcedureEFCore.UTest
         private Mock<DbDataReader> CreateDataReaderMock(params int[] indexes)
         {
             List<TestModel> data = indexes.Select(i => (TestModel) _testModelsCollection[i].Clone()).ToList();
-            var mock = new Mock<DbDataReader>();
+            var mock = new Mock<DbDataReader> { CallBase = true };
             mock.SetupDataReader(data);
             return mock;
         }
