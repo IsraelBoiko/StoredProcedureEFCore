@@ -18,10 +18,10 @@ namespace StoredProcedureEFCore
         /// <summary>
         /// Contains different columns set information mapped to type <typeparamref name="T"/>.
         /// </summary>
-        private static readonly ConcurrentDictionary<int, Prop[]> PropertiesCache = new ConcurrentDictionary<int, Prop[]>();
+        private static readonly ConcurrentDictionary<int, Prop<T>[]> PropertiesCache = new ConcurrentDictionary<int, Prop<T>[]>();
 
         private readonly DbDataReader _reader;
-        private readonly Prop[] _properties;
+        private readonly Prop<T>[] _properties;
 
         public Mapper(DbDataReader reader)
         {
@@ -107,7 +107,7 @@ namespace StoredProcedureEFCore
             }
         }
 
-        private Prop[] MapColumnsToProperties()
+        private Prop<T>[] MapColumnsToProperties()
         {
             Type modelType = typeof(T);
 
@@ -116,12 +116,12 @@ namespace StoredProcedureEFCore
                 columns[i] = _reader.GetName(i);
 
             int propKey = ComputePropertyKey(columns);
-            if (PropertiesCache.TryGetValue(propKey, out Prop[] s))
+            if (PropertiesCache.TryGetValue(propKey, out Prop<T>[] s))
             {
                 return s;
             }
 
-            var properties = new List<Prop>(columns.Length);
+            var properties = new List<Prop<T>>(columns.Length);
             for (int i = 0; i < columns.Length; i++)
             {
                 string name = columns[i].Replace("_", "");
@@ -129,28 +129,24 @@ namespace StoredProcedureEFCore
                 if (prop == null)
                     continue;
 
-                ParameterExpression instance = Expression.Parameter(typeof(object), "instance");
+                ParameterExpression instance = Expression.Parameter(typeof(T), "instance");
                 ParameterExpression value = Expression.Parameter(typeof(object), "value");
 
                 // "x as T" is faster than "(T) x" if x is a reference type
-                UnaryExpression instanceCast = prop.DeclaringType.IsValueType
-                    ? Expression.Convert(instance, prop.DeclaringType)
-                    : Expression.TypeAs(instance, prop.DeclaringType);
-
                 UnaryExpression valueCast = prop.PropertyType.IsValueType
                     ? Expression.Convert(value, prop.PropertyType)
                     : Expression.TypeAs(value, prop.PropertyType);
 
-                MethodCallExpression setterCall = Expression.Call(instanceCast, prop.GetSetMethod(), valueCast);
-                var setter = (Action<object, object>) Expression.Lambda(setterCall, instance, value).Compile();
+                MethodCallExpression setterCall = Expression.Call(instance, prop.GetSetMethod(), valueCast);
+                var setter = (Action<T, object>) Expression.Lambda(setterCall, instance, value).Compile();
 
-                properties.Add(new Prop
+                properties.Add(new Prop<T>
                 {
                     ColumnOrdinal = i,
                     Setter = setter,
                 });
             }
-            Prop[] propertiesArray = properties.ToArray();
+            Prop<T>[] propertiesArray = properties.ToArray();
             PropertiesCache[propKey] = propertiesArray;
             return propertiesArray;
         }

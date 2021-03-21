@@ -2,9 +2,9 @@
 
 namespace StoredProcedureEFCore
 {
-    struct Prop
+    struct Prop<T>
     {
         public int ColumnOrdinal { get; set; }
-        public Action<object, object> Setter { get; set; }
+        public Action<T, object> Setter { get; set; }
     }
 }
