@@ -112,8 +112,12 @@ namespace StoredProcedureEFCore
             Type modelType = typeof(T);
 
             string[] columns = new string[_reader.FieldCount];
+            Type[] columnTypes = new Type[_reader.FieldCount];
             for (int i = 0; i < _reader.FieldCount; ++i)
+            {
                 columns[i] = _reader.GetName(i);
+                columnTypes[i] = _reader.GetFieldType(i);
+            }
 
             int propKey = ComputePropertyKey(columns);
             if (PropertiesCache.TryGetValue(propKey, out Prop<T>[] s))
@@ -132,10 +136,7 @@ namespace StoredProcedureEFCore
                 if (prop == null)
                     continue;
 
-                // "x as T" is faster than "(T) x" if x is a reference type
-                UnaryExpression valueCast = prop.PropertyType.IsValueType
-                    ? Expression.Convert(value, prop.PropertyType)
-                    : Expression.TypeAs(value, prop.PropertyType);
+                Expression valueCast = Cast(Cast(value, columnTypes[i]), prop.PropertyType);
 
                 MethodCallExpression setterCall = Expression.Call(instance, prop.GetSetMethod(), valueCast);
                 var setter = (Action<T, object>) Expression.Lambda(setterCall, instance, value).Compile();
@@ -149,6 +150,16 @@ namespace StoredProcedureEFCore
             Prop<T>[] propertiesArray = properties.ToArray();
             PropertiesCache[propKey] = propertiesArray;
             return propertiesArray;
+        }
+
+        private static Expression Cast(Expression value, Type type)
+        {
+            return type == value.Type
+                ? value
+                // "x as T" is faster than "(T) x" if x is a reference type
+                : type.IsValueType
+                    ? Expression.Convert(value, type)
+                    : Expression.TypeAs(value, type);
         }
     }
 }
