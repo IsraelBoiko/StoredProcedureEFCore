@@ -121,6 +121,9 @@ namespace StoredProcedureEFCore
                 return s;
             }
 
+            ParameterExpression instance = Expression.Parameter(typeof(T), "instance");
+            ParameterExpression value = Expression.Parameter(typeof(object), "value");
+
             var properties = new List<Prop<T>>(columns.Length);
             for (int i = 0; i < columns.Length; i++)
             {
@@ -128,9 +131,6 @@ namespace StoredProcedureEFCore
                 PropertyInfo prop = modelType.GetProperty(name, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
                 if (prop == null)
                     continue;
-
-                ParameterExpression instance = Expression.Parameter(typeof(T), "instance");
-                ParameterExpression value = Expression.Parameter(typeof(object), "value");
 
                 // "x as T" is faster than "(T) x" if x is a reference type
                 UnaryExpression valueCast = prop.PropertyType.IsValueType
